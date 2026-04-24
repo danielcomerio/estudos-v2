@@ -43,3 +43,11 @@ next-env.d.ts
 
 # supabase cli transient state
 supabase/.temp/
+
+# next-pwa generated service worker + workbox files (regenerated on build)
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
+/public/swe-worker-*.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
