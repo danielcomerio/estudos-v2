@@ -1,8 +1,147 @@
-export default function DiscursivasPage() {
+'use client';
+
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useUserData } from '@/hooks/use-user-data';
+import { useDisciplines } from '@/hooks/use-disciplines';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+export default function DiscursivasListPage() {
+  const supabase = getSupabaseClient();
+  const { data: userData } = useUserData();
+  const { data: disciplineData } = useDisciplines();
+
+  const [disciplineId, setDisciplineId] = useState<string>('all');
+  const [search, setSearch] = useState('');
+
+  const disciplineById = useMemo(() => {
+    const m = new Map<string, { name: string; short_name: string | null; cor_hex: string | null }>();
+    for (const d of disciplineData?.disciplines ?? []) {
+      m.set(d.id, { name: d.name, short_name: d.short_name, cor_hex: d.cor_hex });
+    }
+    return m;
+  }, [disciplineData]);
+
+  const userId = userData?.user.id;
+
+  const listQuery = useQuery({
+    queryKey: ['discursivas-list', userId, disciplineId, search],
+    enabled: Boolean(userId),
+    queryFn: async () => {
+      let builder = supabase
+        .from('discursives')
+        .select('id, tema, dificuldade, banca_estilo, tipo_discursiva, discipline_id, created_at, max_linhas, pontuacao_maxima')
+        .eq('user_id', userId!)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (disciplineId !== 'all') builder = builder.eq('discipline_id', disciplineId);
+      if (search.trim().length > 0) builder = builder.ilike('enunciado_completo', `%${search.trim()}%`);
+      const { data, error } = await builder;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const rows = listQuery.data ?? [];
+
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-semibold">Discursivas</h1>
-      <p className="text-muted-foreground mt-2">TODO</p>
+    <main className="space-y-6 p-4 md:p-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Discursivas</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {rows.length} no filtro atual
+        </p>
+      </div>
+
+      <Card>
+        <CardContent className="grid gap-4 pt-6 md:grid-cols-3">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="search">Buscar</Label>
+            <Input
+              id="search"
+              placeholder="texto no enunciado…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Disciplina</Label>
+            <Select value={disciplineId} onValueChange={(v) => setDisciplineId(v ?? 'all')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {disciplineData?.disciplines.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.short_name ?? d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {listQuery.isLoading && <p className="text-muted-foreground text-sm">Carregando…</p>}
+      {!listQuery.isLoading && rows.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Nenhuma discursiva neste filtro. Importe pela tela de{' '}
+            <Link href="/banco/importar" className="underline underline-offset-2">
+              Importar
+            </Link>
+            .
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {rows.map((d) => {
+          const disc = disciplineById.get(d.discipline_id);
+          return (
+            <Card key={d.id}>
+              <CardContent className="flex items-center gap-3 py-4">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge
+                      variant="outline"
+                      style={disc?.cor_hex ? { borderColor: `${disc.cor_hex}66` } : undefined}
+                    >
+                      {disc?.short_name ?? disc?.name ?? '—'}
+                    </Badge>
+                    {d.tipo_discursiva && <Badge variant="outline">Tipo {d.tipo_discursiva}</Badge>}
+                    <Badge variant="outline">Dif. {d.dificuldade}</Badge>
+                    <Badge variant="outline">{d.max_linhas} linhas</Badge>
+                    <Badge variant="outline">{d.pontuacao_maxima} pts</Badge>
+                  </div>
+                  <div className="truncate text-sm font-medium">{d.tema ?? '(sem tema)'}</div>
+                </div>
+                <Link
+                  href={`/discursivas/${d.id}`}
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  Responder
+                </Link>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </main>
   );
 }
