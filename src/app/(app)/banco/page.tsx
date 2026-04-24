@@ -18,6 +18,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -135,6 +144,40 @@ export default function BancoPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Soft-delete em massa, respeitando o filtro atual.
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [bulkConfirmed, setBulkConfirmed] = useState(false);
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error('Sem usuário');
+      let builder = supabase
+        .from('questions')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .is('deleted_at', null)
+        .gte('dificuldade', filters.diffMin)
+        .lte('dificuldade', filters.diffMax);
+      if (filters.disciplineId !== 'all') {
+        builder = builder.eq('discipline_id', filters.disciplineId);
+      }
+      if (filters.topicId !== 'all') {
+        builder = builder.eq('topic_id', filters.topicId);
+      }
+      if (filters.search.trim().length > 0) {
+        builder = builder.ilike('enunciado', `%${filters.search.trim()}%`);
+      }
+      const { error } = await builder;
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['questions'] });
+      toast.success('Questões do filtro excluídas');
+      setBulkDialogOpen(false);
+      setBulkConfirmed(false);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const rows = listQuery.data?.pages.flatMap((p) => p.rows) ?? [];
   const total = listQuery.data?.pages[0]?.total ?? 0;
 
@@ -147,11 +190,66 @@ export default function BancoPage() {
             {total} {total === 1 ? 'questão' : 'questões'} no filtro atual
           </p>
         </div>
-        <Link href="/banco/importar" className={buttonVariants()}>
-          <Plus className="mr-2 h-4 w-4" aria-hidden />
-          Importar
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setBulkDialogOpen(true)}
+            disabled={total === 0}
+          >
+            <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+            Excluir todas ({total})
+          </Button>
+          <Link href="/banco/importar" className={buttonVariants()}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            Importar
+          </Link>
+        </div>
       </div>
+
+      <Dialog
+        open={bulkDialogOpen}
+        onOpenChange={(open) => {
+          setBulkDialogOpen(open);
+          if (!open) setBulkConfirmed(false);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir todas as questões do filtro</DialogTitle>
+            <DialogDescription>
+              Vai apagar (soft-delete) <strong>{total}</strong>{' '}
+              {total === 1 ? 'questão' : 'questões'} que batem com os filtros atuais.
+              Tentativas e reviews FSRS associadas continuam no banco mas órfãs.
+              Operação irreversível pela UI — só dá pra recuperar via SQL no Supabase.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={bulkConfirmed}
+              onCheckedChange={(v) => setBulkConfirmed(Boolean(v))}
+            />
+            Entendi, pode apagar.
+          </label>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!bulkConfirmed || bulkDeleteMutation.isPending || total === 0}
+              onClick={() => bulkDeleteMutation.mutate()}
+            >
+              {bulkDeleteMutation.isPending
+                ? 'Apagando…'
+                : `Apagar ${total} ${total === 1 ? 'questão' : 'questões'}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardContent className="grid gap-4 pt-6 md:grid-cols-5">
