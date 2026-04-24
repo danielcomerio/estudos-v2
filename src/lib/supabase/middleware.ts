@@ -6,6 +6,13 @@ import type { Database } from '@/types/database';
 // that's where the magic-link / OAuth handshake lands the unauthed user and
 // exchanges the code for a session.
 const PUBLIC_ROUTES = new Set(['/login', '/signup', '/auth/callback']);
+// Public prefixes (anyone can read without being logged in).
+const PUBLIC_PREFIXES = ['/u/'];
+
+function isPublicPath(pathname: string): boolean {
+  if (PUBLIC_ROUTES.has(pathname)) return true;
+  return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -36,7 +43,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublicRoute = PUBLIC_ROUTES.has(pathname);
+  const isPublicRoute = isPublicPath(pathname);
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
