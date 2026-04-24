@@ -86,8 +86,8 @@ export default function ComunidadePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Comunidade</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Questões públicas de outros usuários. Ao "fork" uma questão, ela entra no seu banco
-          privado e você passa a ser capaz de praticá-la, revisá-la, editá-la sem afetar a
+          Questões públicas de outros usuários. Ao fazer fork de uma questão, ela entra no seu
+          banco privado e você passa a poder praticá-la, revisá-la e editá-la sem afetar a
           original.
         </p>
       </div>

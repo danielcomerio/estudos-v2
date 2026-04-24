@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   BookOpenCheck,
@@ -17,7 +16,7 @@ import { useUserData } from '@/hooks/use-user-data';
 import { useDisciplines } from '@/hooks/use-disciplines';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 
 function daysUntil(dateStr: string | null | undefined): number | null {
   if (!dateStr) return null;
@@ -148,14 +147,6 @@ export default function DashboardPage() {
       };
     },
   });
-
-  const disciplineById = useMemo(() => {
-    const m = new Map<string, { name: string; short_name: string | null; cor_hex: string | null }>();
-    for (const d of disciplineData?.disciplines ?? []) {
-      m.set(d.id, { name: d.name, short_name: d.short_name, cor_hex: d.cor_hex });
-    }
-    return m;
-  }, [disciplineData]);
 
   const daysToProva = daysUntil(studyProfile?.data_prova);
   const stats = statsQuery.data;

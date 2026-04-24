@@ -9,7 +9,7 @@ import { useUserData } from '@/hooks/use-user-data';
 import { useDisciplines } from '@/hooks/use-disciplines';
 import { QuestionCard } from '@/components/cards/question-card';
 import { QuestionFeedback } from '@/components/cards/question-feedback';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { applyRating, Rating, type ReviewUpsertFields } from '@/lib/fsrs';
 import type { Question, Review, StudySessionConfig } from '@/types';

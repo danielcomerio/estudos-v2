@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useDisciplines } from '@/hooks/use-disciplines';
@@ -90,14 +89,7 @@ export function SimuladoRunner({ simulado, userId }: { simulado: Simulado; userI
 
   const finalizeMutation = useMutation({
     mutationFn: async () => {
-      // Pontuação por disciplina depende de pontos_por_questao no study_profile_disciplines.
-      const { data: spd } = simulado.template_id
-        ? await supabase
-            .from('study_profile_disciplines')
-            .select('discipline_id, pontos_por_questao')
-            .eq('study_profile_id', simulado.user_id) // fallback — refined below
-        : { data: null };
-      // Refined: look up via the simulado's template → study_profile_id.
+      // Pontuação por disciplina: ler pontos_por_questao via template → study_profile.
       let pontosPorDisc = new Map<string, number>();
       if (simulado.template_id) {
         const { data: tmpl } = await supabase
