@@ -74,7 +74,10 @@ export default function BancoPage() {
     queryFn: async ({ pageParam = 0 }) => {
       let builder = supabase
         .from('questions')
-        .select('id, tema, dificuldade, banca_estilo, enunciado, gabarito, discipline_id, topic_id, created_at', { count: 'exact' })
+        .select(
+          'id, tema, dificuldade, banca_estilo, enunciado, gabarito, discipline_id, topic_id, created_at, visibility, origem, quality_score, total_feedback_negative',
+          { count: 'exact' },
+        )
         .eq('user_id', userId!)
         .is('deleted_at', null)
         .gte('dificuldade', filters.diffMin)
@@ -113,6 +116,21 @@ export default function BancoPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['questions'] });
       toast.success('Questão excluída');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const visibilityMutation = useMutation({
+    mutationFn: async ({ id, visibility }: { id: string; visibility: string }) => {
+      const { error } = await supabase
+        .from('questions')
+        .update({ visibility })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['questions'] });
+      toast.success('Visibilidade atualizada');
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -257,10 +275,34 @@ export default function BancoPage() {
                     <Badge variant="outline">Dif. {q.dificuldade}</Badge>
                     {q.banca_estilo && <Badge variant="outline">{q.banca_estilo}</Badge>}
                     <Badge variant="outline">Gab. {q.gabarito}</Badge>
+                    {q.visibility !== 'private' && (
+                      <Badge variant="outline">{q.visibility}</Badge>
+                    )}
+                    {(q.total_feedback_negative ?? 0) > 0 && (
+                      <Badge variant="outline" className="border-amber-500/60 text-amber-600 dark:text-amber-400">
+                        ⚠ feedback
+                      </Badge>
+                    )}
                   </div>
                   <p className="line-clamp-3 text-sm">{q.enunciado}</p>
                 </div>
-                <div className="flex shrink-0 gap-2">
+                <div className="flex shrink-0 flex-col gap-2 md:items-end">
+                  <Select
+                    value={q.visibility}
+                    onValueChange={(v) =>
+                      v && visibilityMutation.mutate({ id: q.id, visibility: v })
+                    }
+                    disabled={q.origem === 'forked' || visibilityMutation.isPending}
+                  >
+                    <SelectTrigger className="h-8 w-32 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="private">Privada</SelectItem>
+                      <SelectItem value="unlisted">Com link</SelectItem>
+                      <SelectItem value="public">Pública</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="outline"
                     size="sm"
