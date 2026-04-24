@@ -8,6 +8,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { useUserData } from '@/hooks/use-user-data';
 import { useDisciplines } from '@/hooks/use-disciplines';
 import { QuestionCard } from '@/components/cards/question-card';
+import { QuestionFeedback } from '@/components/cards/question-feedback';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { applyRating, Rating, type ReviewUpsertFields } from '@/lib/fsrs';
@@ -347,6 +348,11 @@ export function SessionRunner({ session }: { session: Session }) {
         onRateFsrs={(grade) => handleRate(q, grade as 1 | 2 | 3 | 4)}
         onNext={handleNext}
       />
+      {answers[q.id] && (
+        <div className="mx-auto mt-4 w-full max-w-3xl">
+          <QuestionFeedback questionId={q.id} onDeleted={handleNext} />
+        </div>
+      )}
     </main>
   );
 }
