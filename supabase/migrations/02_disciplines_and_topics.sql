@@ -1,7 +1,7 @@
 -- =============================================================================
 -- 02_disciplines_and_topics.sql
 -- Canonical disciplines/topics (shared across users) + per-user-profile config.
--- Seeds the 16 disciplines for the MP-ES (Cientista de Dados) exam.
+-- Seeds the 5 disciplines for the MP-ES (Cientista de Dados) exam.
 -- Idempotent.
 -- =============================================================================
 
@@ -126,26 +126,16 @@ create policy "Users delete their own study_profile_disciplines"
   );
 
 -- =============================================================================
--- SEED: 16 disciplinas do edital MP-ES (Cientista de Dados)
--- Módulo I = Básicas, Módulo II = Específicas
+-- SEED: 5 disciplinas (granularidade agrupada) para MP-ES - Cientista de Dados
+-- Módulo I = Básicas (Português, Legislação MPES)
+-- Módulo II = Específicas (Estatística, Banco de Dados, IA)
 -- =============================================================================
 insert into public.disciplines (slug, name, short_name, module, ordem, cor_hex, icone) values
-  ('portugues',     'Português',                                          'Português',    'Módulo I - Básicas',     10, '#3b82f6', 'book-open-text'),
-  ('raciocinio',    'Raciocínio Lógico-Matemático',                       'RLM',          'Módulo I - Básicas',     20, '#8b5cf6', 'brain'),
-  ('legisMP',       'Legislação e Código de Ética do MPES',               'Legis MPES',   'Módulo I - Básicas',     30, '#ef4444', 'gavel'),
-  ('mlSup',         'Machine Learning Supervisionado',                    'ML Sup.',      'Módulo II - Específicas', 40, '#10b981', 'bot'),
-  ('mlNsup',        'Machine Learning Não-Supervisionado',                'ML N-Sup.',    'Módulo II - Específicas', 50, '#14b8a6', 'layers'),
-  ('deepLearning',  'Redes Neurais e Deep Learning',                      'Deep Learning','Módulo II - Específicas', 60, '#f59e0b', 'network'),
-  ('probAlgLin',    'Probabilidade e Álgebra Linear',                     'Prob + AL',    'Módulo II - Específicas', 70, '#6366f1', 'sigma'),
-  ('estatistica',   'Estatística e Inferência',                           'Estatística',  'Módulo II - Específicas', 80, '#0ea5e9', 'bar-chart-3'),
-  ('visualizacao',  'Visualização e Storytelling',                        'Viz',          'Módulo II - Específicas', 90, '#ec4899', 'pie-chart'),
-  ('bdRelacional',  'Banco de Dados Relacionais',                         'BD Rel.',      'Módulo II - Específicas',100, '#f97316', 'database'),
-  ('dwBi',          'Data Warehousing e Business Intelligence',           'DW / BI',      'Módulo II - Específicas',110, '#84cc16', 'package'),
-  ('geoespacial',   'Geoprocessamento e Análise Espacial',                'Geoespacial',  'Módulo II - Específicas',120, '#22c55e', 'map'),
-  ('gestaoProjTI',  'Gestão de Projetos de TI',                           'Gestão TI',    'Módulo II - Específicas',130, '#a855f7', 'kanban-square'),
-  ('iaGen',         'IA Generativa e LLMs',                               'IA Gen.',      'Módulo II - Específicas',140, '#d946ef', 'sparkles'),
-  ('laudos',        'Laudos e Documentação Técnica',                      'Laudos',       'Módulo II - Específicas',150, '#64748b', 'file-text'),
-  ('leiEtica',      'Legislação e Aspectos Éticos (LGPD, Bioética, etc.)','LGPD + Ética', 'Módulo II - Específicas',160, '#dc2626', 'shield')
+  ('portugues',               'Português',                              'Português',    'Módulo I - Básicas',      10, '#3b82f6', 'book-open-text'),
+  ('legislacao_mp',           'Legislação e Código de Ética do MPES',   'Legislação',   'Módulo I - Básicas',      20, '#ef4444', 'gavel'),
+  ('estatistica',             'Análise Estatística e Inferência',       'Estatística',  'Módulo II - Específicas', 30, '#0ea5e9', 'bar-chart-3'),
+  ('banco_de_dados',          'Banco de Dados Relacionais',             'BD',           'Módulo II - Específicas', 40, '#f97316', 'database'),
+  ('inteligencia_artificial', 'Inteligência Artificial',                'IA',           'Módulo II - Específicas', 50, '#10b981', 'bot')
 on conflict (slug) do update set
   name       = excluded.name,
   short_name = excluded.short_name,
