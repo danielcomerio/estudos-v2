@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { AlertCircle, CheckCircle2, FileJson, Upload } from 'lucide-react';
@@ -157,17 +157,49 @@ function StatusBadge({ status }: { status: FileState['status'] }) {
   );
 }
 
+function pickJsonFiles(input: FileList | File[] | null): File[] {
+  if (!input) return [];
+  const arr = Array.from(input);
+  // Browsers don't enforce `accept` on drag-drop, so filter ourselves.
+  return arr.filter(
+    (f) =>
+      f.name.toLowerCase().endsWith('.json') ||
+      f.type === 'application/json' ||
+      f.type === 'text/json',
+  );
+}
+
 export default function ImportarPage() {
   const { data: userData } = useUserData();
   const queryClient = useQueryClient();
   const [files, setFiles] = useState<FileState[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
 
   const studyProfileId = userData?.activeStudyProfile?.id;
 
-  const onFilesSelected = async (selected: FileList | null) => {
-    if (!selected) return;
-    const arr = Array.from(selected);
+  // Prevent the browser from navigating away when files are dropped outside
+  // the dropzone (which would otherwise open the JSON in the same tab).
+  useEffect(() => {
+    const cancel = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('dragover', cancel);
+    window.addEventListener('drop', cancel);
+    return () => {
+      window.removeEventListener('dragover', cancel);
+      window.removeEventListener('drop', cancel);
+    };
+  }, []);
+
+  const onFilesSelected = async (selected: FileList | File[] | null) => {
+    const arr = pickJsonFiles(selected);
+    if (arr.length === 0) {
+      // Tell the user when they dropped non-JSON files (or nothing matched).
+      const total = selected ? Array.from(selected).length : 0;
+      if (total > 0) toast.error('Nenhum arquivo .json encontrado nos itens soltos');
+      return;
+    }
     // Insert placeholders while validating.
     const placeholders: FileState[] = arr.map((f) => ({
       id: `${f.name}-${f.size}-${f.lastModified}`,
@@ -254,9 +286,43 @@ export default function ImportarPage() {
           <CardDescription>Aceita array puro ou {'{ items | questoes | questions }'}.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="border-border hover:bg-accent/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-sm transition-colors">
-            <Upload className="h-4 w-4" aria-hidden />
-            Selecionar arquivos JSON
+          <label
+            className={cn(
+              'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed p-8 text-sm transition-colors',
+              dragActive
+                ? 'border-ring bg-accent/60'
+                : 'border-border hover:bg-accent/40',
+            )}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragActive(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!dragActive) setDragActive(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Only deactivate when leaving the drop zone itself, not children.
+              if (e.currentTarget === e.target) setDragActive(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragActive(false);
+              onFilesSelected(e.dataTransfer.files);
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Upload className="h-4 w-4" aria-hidden />
+              <span>{dragActive ? 'Solte os arquivos…' : 'Selecionar arquivos JSON'}</span>
+            </div>
+            <span className="text-muted-foreground text-xs">
+              ou arraste e solte aqui · múltiplos arquivos OK
+            </span>
             <input
               type="file"
               multiple
